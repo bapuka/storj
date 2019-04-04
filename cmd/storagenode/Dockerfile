@@ -2,6 +2,7 @@ ARG DOCKER_ARCH
 FROM ${DOCKER_ARCH:-amd64}/alpine
 ARG TAG
 ARG GOARCH
+ENV GOARCH ${GOARCH}
 ENV CONF_PATH=/root/.local/share/storj/storagenode \
     IDENT_PATH=/root/.local/share/storj/identity/storagenode \
     CERT_DIFFICULTY=30 \

@@ -128,7 +128,7 @@ satellite-image: ## Build satellite Docker image
 satellite-ui-image: ## Build satellite-ui Docker image
 	${DOCKER_BUILD} --pull=true -t storjlabs/satellite-ui:${TAG}${CUSTOMTAG} -f web/satellite/Dockerfile .
 .PHONY: storagenode-image
-storagenode-image: #storagenode_linux_arm storagenode_linux_amd64 ## Build storagenode Docker image
+storagenode-image: storagenode_linux_arm storagenode_linux_amd64 ## Build storagenode Docker image
 	${DOCKER_BUILD} --pull=true -t storjlabs/storagenode:${TAG}${CUSTOMTAG}-amd64 \
 		-f cmd/storagenode/Dockerfile .
 	${DOCKER_BUILD} --pull=true -t storjlabs/storagenode:${TAG}${CUSTOMTAG}-arm32v6 \
@@ -160,8 +160,6 @@ binary:
 	chmod 755 release/${TAG}/$(COMPONENT)_${GOOS}_${GOARCH}${FILEEXT}
 	[ "${FILEEXT}" = ".exe" ] && storj-sign release/${TAG}/$(COMPONENT)_${GOOS}_${GOARCH}${FILEEXT} || echo "Skipping signing"
 	rm -f release/${TAG}/${COMPONENT}_${GOOS}_${GOARCH}.zip
-	#cd release/${TAG}; zip ${COMPONENT}_${GOOS}_${GOARCH}.zip ${COMPONENT}_${GOOS}_${GOARCH}${FILEEXT}
-	#rm -f release/${TAG}/${COMPONENT}_${GOOS}_${GOARCH}${FILEEXT}
 
 .PHONY: gateway_%
 gateway_%:
@@ -169,9 +167,9 @@ gateway_%:
 .PHONY: satellite_%
 satellite_%:
 	GOOS=$(word 2, $(subst _, ,$@)) GOARCH=$(word 3, $(subst _, ,$@)) COMPONENT=satellite $(MAKE) binary
-#.PHONY: storagenode_%
-storagenode_%: release/${TAG}/$@
-	GOOS=$(word 2, $(subst _, ,$@)) GOARCH=$(word 3, $(subst _, ,$@)) COMPONENT=storagenode $(MAKE) binary
+.PHONY: storagenode_%
+storagenode_%:
+	export GOOS=$(word 2, $(subst _, ,$@)) GOARCH=$(word 3, $(subst _, ,$@)) COMPONENT=storagenode; if [ ! -f release/${TAG}/${COMPONENT}_${GOOS}_${GOARCH} ]; then $(MAKE) binary; fi
 .PHONY: uplink_%
 uplink_%:
 	GOOS=$(word 2, $(subst _, ,$@)) GOARCH=$(word 3, $(subst _, ,$@)) COMPONENT=uplink $(MAKE) binary
@@ -225,7 +223,8 @@ endif
 
 .PHONY: binaries-upload
 binaries-upload: ## Upload binaries to Google Storage (jenkins)
-	cd release; gsutil -m cp -r . gs://storj-v3-alpha-builds
+	cd "release/${TAG}"; for f in "*"; do zip "$f".zip "$f"; done
+	cd "release/${TAG}"; gsutil -m cp -r *.zip "gs://storj-v3-alpha-builds/${TAG}/"
 
 ##@ Clean
 
