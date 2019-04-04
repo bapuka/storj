@@ -4,8 +4,10 @@
 package datarepair_test
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
+	// "time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -84,16 +86,28 @@ func TestDataRepair(t *testing.T) {
 			nodesToKill[piece.NodeId] = true
 			lostPieces = append(lostPieces, piece.GetPieceNum())
 		}
-		t.Logf("Killing %d nodes of %d", toKill, len(planet.StorageNodes))
+
+		fmt.Println("nodes to kill")
+		for i := range nodesToKill {
+			fmt.Println(i.String())
+		}
+		fmt.Println("nodes to keep alive")
+		for j := range nodesToKeepAlive {
+			fmt.Println(j.String())
+		}
+
+		// t.Logf("Killing %d nodes of %d", toKill, len(planet.StorageNodes))
 		for _, node := range planet.StorageNodes {
 			if nodesToKill[node.ID()] {
 				err = planet.StopPeer(node)
 				assert.NoError(t, err)
-				t.Logf("Killing %s = %s", node.ID(), node.Addr())
+				fmt.Println("killing:", node.ID())
+				// t.Logf("Killing %s = %s", node.ID(), node.Addr())
 				_, err = satellite.Overlay.Service.UpdateUptime(ctx, node.ID(), false)
 				assert.NoError(t, err)
 			} else {
-				t.Logf("Keeping %s = %s", node.ID(), node.Addr())
+				fmt.Println("not killing:", node.ID())
+				// 	// t.Logf("Keeping %s = %s", node.ID(), node.Addr())
 			}
 		}
 
@@ -115,6 +129,8 @@ func TestDataRepair(t *testing.T) {
 			if nodesToKeepAlive[node.ID()] {
 				err = planet.StopPeer(node)
 				assert.NoError(t, err)
+				fmt.Println("also killing", node.ID().String())
+				// time.Sleep(5 * time.Second)
 
 				_, err = satellite.Overlay.Service.UpdateUptime(ctx, node.ID(), false)
 				assert.NoError(t, err)
@@ -131,7 +147,9 @@ func TestDataRepair(t *testing.T) {
 		assert.NoError(t, err)
 
 		remotePieces = pointer.GetRemote().GetRemotePieces()
+		fmt.Println("nodes in the pointer")
 		for _, piece := range remotePieces {
+			fmt.Println("in pointer", piece.NodeId)
 			assert.False(t, nodesToKill[piece.NodeId])
 		}
 	})

@@ -9,7 +9,10 @@ import (
 	"strings"
 	"time"
 
+	// "github.com/golang/protobuf/ptypes"
+	// "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/zeebo/errs"
+	// "go.uber.org/zap"
 	monkit "gopkg.in/spacemonkeygo/monkit.v2"
 
 	"storj.io/storj/pkg/overlay"
@@ -269,6 +272,8 @@ func (cache *overlaycache) Update(ctx context.Context, info *pb.Node) (err error
 			update.AuditSuccessCount = dbx.Node_AuditSuccessCount(info.Reputation.AuditSuccessCount)
 			update.TotalUptimeCount = dbx.Node_TotalUptimeCount(info.Reputation.UptimeCount)
 			update.UptimeSuccessCount = dbx.Node_UptimeSuccessCount(info.Reputation.UptimeSuccessCount)
+			// update.LastContactSuccess = dbx.Node_LastContactSuccess(convertTime(info.Reputation.LastContactSuccess))
+			// update.LastContactFailure = dbx.Node_LastContactFailure(convertTime(info.Reputation.LastContactFailure))
 		}
 
 		if info.Metadata != nil {
@@ -595,3 +600,15 @@ func checkRatioVars(successCount, totalCount int64) (ratio float64, err error) {
 	ratio = float64(successCount) / float64(totalCount)
 	return ratio, nil
 }
+
+// // convertTime converts gRPC timestamp to Go time
+// func convertTime(ts *timestamp.Timestamp) time.Time {
+// 	if ts == nil {
+// 		return time.Time{}
+// 	}
+// 	t, err := ptypes.Timestamp(ts)
+// 	if err != nil {
+// 		zap.S().Warnf("Failed converting timestamp %v: %v", ts, err)
+// 	}
+// 	return t
+// }

@@ -5,6 +5,7 @@ package orders
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -163,7 +164,16 @@ func (service *Service) CreateGetOrderLimits(ctx context.Context, uplink *identi
 	}
 
 	if len(limits) < redundancy.RequiredCount() {
-		err = Error.New("XXX not enough nodes available: got %d, required %d, nil %d, off %d, len %d", len(limits), redundancy.RequiredCount(), nilCount, offlineCount, len(pointer.GetRemote().GetRemotePieces()))
+		fmt.Println("XXX not enough nodes available:")
+		fmt.Printf("got %d\n", len(limits))
+		for _, lim := range limits {
+			fmt.Println("\t", lim.GetLimit().StorageNodeId)
+		}
+		fmt.Printf("required %d\n", redundancy.RequiredCount())
+		fmt.Printf("repair threshold %d\n", redundancy.RepairThreshold())
+		fmt.Printf("nil count %d\n", nilCount)
+		fmt.Printf("offline count %d\n", offlineCount)
+		fmt.Printf("nodes in pointer %d\n", len(pointer.GetRemote().GetRemotePieces()))
 		return nil, errs.Combine(err, combinedErrs)
 	}
 
