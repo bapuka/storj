@@ -22,7 +22,7 @@ FILEEXT := .exe
 endif
 
 DOCKER_BUILD := docker build \
-	--build-arg GO_VERSION=${GO_VERSION}
+	--build-arg TAG=${TAG}
 
 .DEFAULT_GOAL := help
 .PHONY: help
@@ -128,13 +128,12 @@ satellite-image: ## Build satellite Docker image
 satellite-ui-image: ## Build satellite-ui Docker image
 	${DOCKER_BUILD} --pull=true -t storjlabs/satellite-ui:${TAG}${CUSTOMTAG} -f web/satellite/Dockerfile .
 .PHONY: storagenode-image
-storagenode-image: storagenode_linux_arm storagenode_linux_amd64 ## Build storagenode Docker image
+storagenode-image: #storagenode_linux_arm storagenode_linux_amd64 ## Build storagenode Docker image
 	${DOCKER_BUILD} --pull=true -t storjlabs/storagenode:${TAG}${CUSTOMTAG}-amd64 \
-		--build-arg=TAG=${TAG} -f cmd/storagenode/Dockerfile .
-	${DOCKER_BUILD} --pull=true -t storjlabs/storagenode:${TAG}${CUSTOMTAG}-arm \
+		-f cmd/storagenode/Dockerfile .
+	${DOCKER_BUILD} --pull=true -t storjlabs/storagenode:${TAG}${CUSTOMTAG}-arm32v6 \
 		--build-arg=GOARCH=arm --build-arg=DOCKER_ARCH=arm32v6 \
-		--build-arg=TAG=${TAG} -f cmd/storagenode/Dockerfile .
-	docker manifest create storjlabs/storagenode:${TAG}${CUSTOMTAG} ...
+		-f cmd/storagenode/Dockerfile .
 .PHONY: uplink-image
 uplink-image: ## Build uplink Docker image
 	${DOCKER_BUILD} --pull=true -t storjlabs/uplink:${TAG}${CUSTOMTAG} -f cmd/uplink/Dockerfile .
@@ -170,8 +169,8 @@ gateway_%:
 .PHONY: satellite_%
 satellite_%:
 	GOOS=$(word 2, $(subst _, ,$@)) GOARCH=$(word 3, $(subst _, ,$@)) COMPONENT=satellite $(MAKE) binary
-.PHONY: storagenode_%
-storagenode_%:
+#.PHONY: storagenode_%
+storagenode_%: release/${TAG}/$@
 	GOOS=$(word 2, $(subst _, ,$@)) GOARCH=$(word 3, $(subst _, ,$@)) COMPONENT=storagenode $(MAKE) binary
 .PHONY: uplink_%
 uplink_%:
@@ -203,10 +202,16 @@ deploy: ## Update Kubernetes deployments in staging (jenkins)
 
 .PHONY: push-images
 push-images: ## Push Docker images to Docker Hub (jenkins)
-	docker push storjlabs/satellite:${TAG}${CUSTOMTAG}
-	docker push storjlabs/storagenode:${TAG}${CUSTOMTAG}
-	docker push storjlabs/uplink:${TAG}${CUSTOMTAG}
-	docker push storjlabs/gateway:${TAG}${CUSTOMTAG}
+	-docker push storjlabs/satellite:${TAG}${CUSTOMTAG}
+	docker push storjlabs/storagenode:${TAG}${CUSTOMTAG}-amd64
+	docker push storjlabs/storagenode:${TAG}${CUSTOMTAG}-arm32v6
+	# images have to be pushed before a manifest can be created
+	docker manifest create storjlabs/storagenode:${TAG}${CUSTOMTAG} storjlabs/storagenode:${TAG}${CUSTOMTAG}-amd64 storjlabs/storagenode:${TAG}${CUSTOMTAG}-arm32v6
+	docker manifest annotate storjlabs/storagenode:${TAG}${CUSTOMTAG} storjlabs/storagenode:${TAG}${CUSTOMTAG}-amd64 --os linux --arch amd64
+	docker manifest annotate storjlabs/storagenode:${TAG}${CUSTOMTAG} storjlabs/storagenode:${TAG}${CUSTOMTAG}-arm32v6 --os linux --arch arm --variant arm32v6
+	docker manifest push storjlabs/storagenode:${TAG}${CUSTOMTAG}
+	-docker push storjlabs/uplink:${TAG}${CUSTOMTAG}
+	-docker push storjlabs/gateway:${TAG}${CUSTOMTAG}
 ifeq (${TRACKED_BRANCH},true)
 	docker tag storjlabs/satellite:${TAG}${CUSTOMTAG} storjlabs/satellite:${LATEST_TAG}
 	docker push storjlabs/satellite:${LATEST_TAG}
